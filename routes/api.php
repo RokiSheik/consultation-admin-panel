@@ -97,3 +97,18 @@ use App\Http\Controllers\API\CouponController;
 Route::post('/validate-coupon', [CouponController::class, 'validateCoupon']);
 
 
+
+
+
+
+
+
+
+// Landing Page related routes can be added here if needed
+use App\Http\Controllers\Api\LandingPageController;
+
+Route::post('/submit-landing-form', [OrderController::class, 'submitLandingForm']);
+Route::get('landing-pages/{slug}', [LandingPageController::class, 'show']);
+
+
+

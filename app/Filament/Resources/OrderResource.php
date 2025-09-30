@@ -32,17 +32,18 @@ class OrderResource extends Resource
                 Select::make('customer_id')
                     ->relationship('customer', 'name')
                     ->searchable()
-                    ->disabled()
+                    // ->disabled()
                     ->required(),
 
                 TextInput::make('total_amount')
                     ->numeric()
-                    ->disabled()
+                    // ->disabled()
                     ->required(),
 
                 TextInput::make('service_name') // Change from 'service' to 'services'
                     ->label('Service')
-                    ->disabled(),
+                    // ->disabled(),
+                    ->required(),
 
                 Select::make('status')
                     ->options([
@@ -54,18 +55,21 @@ class OrderResource extends Resource
 
                 TextInput::make('package_type') // Dropdown for Package Selection
                     ->required()
-                    ->disabled()
+                    // ->disabled()
                     ->label('Package'),
 
                 TextInput::make('order_id') // Display the Order ID
-                    ->disabled()
+                    // ->disabled()
                     ->default(fn($record) => $record->order_id ?? 'N/A')
                     ->label('Order ID'),
 
-                TextInput::make('order_date') // Display Order Date
-                    ->disabled()
-                    ->default(fn($record) => $record->order_date->format('Y-m-d H:i:s') ?? 'N/A') // Format the date properly
-                    ->label('Order Date'),
+                TextInput::make('order_date')
+    ->disabled()
+    ->default(fn($record) => $record?->order_date 
+        ? $record->order_date->format('Y-m-d H:i:s') 
+        : 'N/A')
+    ->label('Order Date'),
+
 
             ])
             ->extraAttributes(['class' => 'w-full max-w-2xl mx-auto'])
@@ -80,7 +84,19 @@ class OrderResource extends Resource
                     ->label('NO')
                     ->rowIndex(),
                 TextColumn::make('order_id'),
-                TextColumn::make('customer.name')->label('Customer'),
+                TextColumn::make('customer_name')
+                ->label('Customer')
+                ->getStateUsing(function ($record) {
+                    if ($record->customer) {
+                        // If the customer exists, return the name
+                        return $record->customer->name;
+                    } else {
+                        // Calculate lead id from pseudo-customer id
+                        $leadId = $record->customer_id - 10000;
+                        $lead = \App\Models\Lead::find($leadId);
+                        return $lead?->name ?? 'N/A';
+                    }
+                }),
                 TextColumn::make('service_name')->label('Service'),
                 TextColumn::make('package_type')->label('Package'),
 
@@ -131,7 +147,7 @@ class OrderResource extends Resource
     }
     public static function canCreate(): bool
     {
-        return false; // This will remove the "Create New" button
+        return true; // This will remove the "Create New" button
     }
 
     public static function getPages(): array
