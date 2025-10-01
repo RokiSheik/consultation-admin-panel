@@ -15,6 +15,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use AlperenErsoy\FilamentExport\Actions\FilamentExportBulkAction;
+
 
 class CustomerResource extends Resource
 {
@@ -36,6 +38,9 @@ class CustomerResource extends Resource
                     TextInput::make('name')->required()->inlineLabel(),
                     TextInput::make('email')->email()->required()->inlineLabel(),
                     TextInput::make('phone_number')->inlineLabel(),
+                    TextInput::make('whatsapp_number')->inlineLabel(),
+                    TextInput::make('address')->inlineLabel(),
+                    TextInput::make('profession')->inlineLabel(),
                     TextInput::make('password')->password()->visibleOn('create')->inlineLabel(),
                 ])->columnSpan(2)->columns(1),
             ])->columns(3);
@@ -51,7 +56,10 @@ class CustomerResource extends Resource
                 TextColumn::make('id'),
                 TextColumn::make('name')->searchable(),
                 TextColumn::make('email')->searchable(),
-                TextColumn::make('phone_number')->searchable()
+                TextColumn::make('phone_number')->searchable(),
+                TextColumn::make('whatsapp_number')->searchable(),
+                TextColumn::make('address')->searchable(),
+                TextColumn::make('profession')->searchable(),
             ])
             ->filters([
                 //
@@ -62,6 +70,10 @@ class CustomerResource extends Resource
                 Tables\Actions\DeleteAction::make()->label('')->tooltip('Delete')
             ])
             ->bulkActions([
+                FilamentExportBulkAction::make('export')
+                    ->fileName('podcast-requests')
+                    ->defaultFormat('pdf')
+                    ->directDownload(), 
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
