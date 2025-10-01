@@ -39,6 +39,7 @@ class LandingPageResource extends JsonResource
             'slug' => $this->slug,
             'section1' => [
                 'image' => $this->section1_image ? asset('storage/' . $this->section1_image) : null,
+                'video' => $this->section1_video,
                 'title' => $this->section1_title,
                 'bullets' => $flatten($this->section1_bullets),
                 'regular_price' => $this->section1_regular_price,

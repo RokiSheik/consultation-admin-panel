@@ -9,6 +9,7 @@ class LandingPage extends Model
     protected $fillable = [
         'slug',
         'section1_image',
+        'section1_video',
         'section1_title',
         'section1_bullets',
         'section1_regular_price',

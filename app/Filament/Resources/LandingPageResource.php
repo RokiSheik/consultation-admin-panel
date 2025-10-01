@@ -38,6 +38,7 @@ class LandingPageResource extends Resource
                 ->image()
                 ->disk('public')
                 ->imagePreviewHeight(120),
+            TextInput::make('section1_video')->label('Video URL'),
             TextInput::make('section1_title')->required(),
             Repeater::make('section1_bullets')
                 ->label('Bullets')
@@ -48,7 +49,7 @@ class LandingPageResource extends Resource
             TextInput::make('section1_regular_price')->numeric()->label('Regular price'),
             TextInput::make('section1_offer_price')->numeric()->label('Offer price'),
             TextInput::make('section1_registration_text')->label('Registration button text'),
-        ])->columns(2),
+        ])->columns(1),
 
         Section::make('Section 2')->schema([
             RichEditor::make('section2_description')->label('Description (HTML supported)'),
@@ -61,19 +62,19 @@ class LandingPageResource extends Resource
                     TextInput::make('end_time')->type('time')->label('End time'),
                 ])
                 ->createItemButtonLabel('Add class'),
-        ]),
+        ])->columns(1),
 
         Section::make('Section 3')->schema([
             TextInput::make('section3_submit_text')->label('Submit button text'),
-        ]),
+        ])->columns(1),
 
         Section::make('Section 4')->schema([
             TextInput::make('section4_terms_title')->label('Terms & Conditions Title'),
             Repeater::make('section4_terms_bullets')
                 ->schema([ TextInput::make('text')->label('Bullet') ])
                 ->createItemButtonLabel('Add term bullet'),
-        ]),
-            ]);
+        ])->columns(1),
+            ])->columns(1);
     }
 
     public static function table(Table $table): Table
