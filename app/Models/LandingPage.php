@@ -20,11 +20,15 @@ class LandingPage extends Model
         'section3_submit_text',
         'section4_terms_title',
         'section4_terms_bullets',
+        'courses',
+        'form_fields',
     ];
 
     protected $casts = [
         'section1_bullets' => 'array',
         'section2_class_details' => 'array',
         'section4_terms_bullets' => 'array',
+        'courses' => 'array', 
+        'form_fields' => 'array',
     ];
 }

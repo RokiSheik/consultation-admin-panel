@@ -39,6 +39,16 @@ class LeadResource extends Resource
                 Forms\Components\TextInput::make('future_revenue'),
                 Forms\Components\TextInput::make('total_team')->numeric(),
                 Forms\Components\DateTimePicker::make('created_at')->disabled(),
+                Forms\Components\Section::make('Other Submitted Fields')
+    ->schema([
+        Forms\Components\KeyValue::make('form_response')
+            ->keyLabel('Field')
+            ->valueLabel('Value')
+            ->disabled()       // Makes it read-only
+            ->columnSpanFull(),
+    ])
+    ->columns(1),
+
             ]);
     }
 
@@ -61,6 +71,7 @@ class LeadResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime('d M Y h:i A')
                     ->sortable(),
+
             ])
             ->filters([
                 Tables\Filters\Filter::make('created_today')

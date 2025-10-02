@@ -57,6 +57,8 @@ class LandingPageResource extends JsonResource
                 'terms_title' => $this->section4_terms_title,
                 'terms_bullets' => $flatten($this->section4_terms_bullets),
             ],
+            'courses' => $this->courses ?? [],
+            'form_fields' => $this->form_fields ?? [],
         ];
     }
 }

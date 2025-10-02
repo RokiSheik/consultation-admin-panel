@@ -19,6 +19,10 @@ class Lead extends Model
         'future_revenue',
         'total_team',
         'landing_title', 
+        'form_response',
+    ];
+    protected $casts = [
+        'form_response' => 'array',
     ];
 
     // Relationship: Lead has many Orders

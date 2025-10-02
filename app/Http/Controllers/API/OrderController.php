@@ -25,6 +25,20 @@ class OrderController extends Controller
 
         $affiliatorId = $request->input('affiliator_id'); // this can come from query or frontend
 
+            $existingOrder = Order::where('customer_id', $customer->id)
+                ->where('service_name', $request->service_name)
+                ->where('package_type', $request->package_type)
+                ->where('status', 'completed')
+                ->first();
+
+            if ($existingOrder) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You already have a completed order for this package.',
+                    'order' => $existingOrder
+                ], 409);
+            }
+            
         $order = Order::create([
             'customer_id' => $customer->id,
             'affiliator_id' => $affiliatorId, // <- new
@@ -40,19 +54,19 @@ class OrderController extends Controller
         }
 
         // Check for free course orders
-if ($request->service_name === 'Course' && (float) $request->amount === 0.0) {
-    // Mark order as completed
-    $order->update(['status' => 'completed']);
+        if ($request->service_name === 'Course' && (float) $request->amount === 0.0) {
+            // Mark order as completed
+            $order->update(['status' => 'completed']);
 
-    // Notify customer
-    $customer->notify(new OrderSuccessNotification($order));
+            // Notify customer
+            $customer->notify(new OrderSuccessNotification($order));
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Free course enrolled successfully.',
-        'order' => $order,
-    ]);
-}
+            return response()->json([
+                'success' => true,
+                'message' => 'Free course enrolled successfully.',
+                'order' => $order,
+            ]);
+        }
 
 
         $post_data = [
@@ -148,88 +162,169 @@ if ($request->service_name === 'Course' && (float) $request->amount === 0.0) {
     ]);
 }
 
+// public function submitLandingForm(Request $request)
+// {
+//     // Step 1: Validate form input
+//     $request->validate([
+//         'name' => 'required|string|max:255',
+//         'whatsapp' => 'required|string|max:20',
+//         'profession' => 'nullable|string|max:255',
+//         'business_type' => 'nullable|string|max:255',
+//         'current_revenue' => 'nullable|string|max:255',
+//         'future_revenue' => 'nullable|string|max:255',
+//         'total_team' => 'nullable|integer',
+//         'landing_title' => 'required|string|max:255',
+//         'offer_price' => 'required|numeric',
+//     ]);
+
+//     // Step 2: Store lead
+//     $lead = \App\Models\Lead::create([
+//         'name' => $request->name,
+//         'whatsapp' => $request->whatsapp,
+//         'profession' => $request->profession,
+//         'business_type' => $request->business_type,
+//         'current_revenue' => $request->current_revenue,
+//         'future_revenue' => $request->future_revenue,
+//         'total_team' => $request->total_team,
+//         'landing_title' => $request->landing_title,
+//     ]);
+
+//     // Step 3: Create order
+//     $transaction_id = 'TRX_' . uniqid();
+//     $pseudoCustomerId = 10000 + $lead->id;
+
+//     $order = \App\Models\Order::create([
+//         'customer_id' => $pseudoCustomerId,
+//         'customer_phone' => $lead->whatsapp,
+//         'service_name' => 'Campaign',
+//         'package_type' => $request->landing_title,
+//         'total_amount' => $request->offer_price,
+//         'status' => 'pending',
+//         'order_date' => now(),
+//         'transaction_id' => $transaction_id,
+//     ]);
+
+//     // Step 4: Prepare SSLCommerz data
+//     $post_data = [
+//         'store_id' => config('services.sslcommerz.store_id'),
+//         'store_passwd' => config('services.sslcommerz.store_password'),
+//         'total_amount' => (float)$order->total_amount,
+//         'currency' => 'BDT',
+//         'tran_id' => $transaction_id,
+//         'success_url' => url('/api/sslcommerz/success'),
+//         'fail_url' => url('/api/sslcommerz/fail'),
+//         'cancel_url' => url('/api/sslcommerz/cancel'),
+//         'return_url' => 'https://passionateworlduniversity.com/order-success',
+//         'cus_name' => $request->name,
+//         'cus_phone' => $request->whatsapp,
+//         'cus_add1' => "N/A",
+//         'cus_email' => "N/A",
+//         'cus_city' => "Rajshahi",
+//         'cus_country' => "Bangladesh",
+//         'shipping_method' => "NO",
+//         'product_name' => $order->service_name,
+//         'product_category' => $order->package_type,
+//         'product_profile' => "general",
+//         'checkout_url' => 'easy',
+//     ];
+
+//     // Step 5: Call SSLCommerz API
+//     $response = \Illuminate\Support\Facades\Http::asForm()->post('https://securepay.sslcommerz.com/gwprocess/v4/api.php', $post_data);
+//     $responseData = $response->json();
+
+//     if (!empty($responseData['GatewayPageURL'])) {
+//         return response()->json([
+//             'success' => true,
+//             'payment_url' => $responseData['GatewayPageURL']
+//         ]);
+//     }
+
+//     return response()->json([
+//         'error' => true,
+//         'message' => $responseData['failedreason'] ?? 'Payment initiation failed'
+//     ], 422);
+// }
+
 public function submitLandingForm(Request $request)
 {
-    // Step 1: Validate form input
+    // Step 1: Validate required fields
     $request->validate([
         'name' => 'required|string|max:255',
-        'whatsapp' => 'required|string|max:20',
-        'profession' => 'nullable|string|max:255',
-        'business_type' => 'nullable|string|max:255',
-        'current_revenue' => 'nullable|string|max:255',
-        'future_revenue' => 'nullable|string|max:255',
-        'total_team' => 'nullable|integer',
         'landing_title' => 'required|string|max:255',
         'offer_price' => 'required|numeric',
     ]);
 
-    // Step 2: Store lead
+    // Step 2: Separate dynamic fields
+    $dynamic_fields = $request->except(['landing_title', 'offer_price']);
+
+    // Step 3: Store lead
     $lead = \App\Models\Lead::create([
-        'name' => $request->name,
-        'whatsapp' => $request->whatsapp,
-        'profession' => $request->profession,
-        'business_type' => $request->business_type,
-        'current_revenue' => $request->current_revenue,
-        'future_revenue' => $request->future_revenue,
-        'total_team' => $request->total_team,
-        'landing_title' => $request->landing_title,
+        'name'           => $request->name,  
+        'whatsapp'       => $dynamic_fields['whatsapp'] ?? 'N/A',  
+        'profession'     => $dynamic_fields['profession'] ?? 'N/A',  
+        'business_type'  => $dynamic_fields['business_type'] ?? 'N/A',  
+        'current_revenue'=> $dynamic_fields['current_revenue'] ?? 0,  
+        'future_revenue' => $dynamic_fields['future_revenue'] ?? 0,  
+        'total_team'    => $dynamic_fields['total_team'] ?? 0,  
+        'landing_title'  => $request->landing_title,
+        'form_response' => $dynamic_fields,               // JSON column for other fields
     ]);
 
-    // Step 3: Create order
+    // Step 4: Create order
     $transaction_id = 'TRX_' . uniqid();
-    $pseudoCustomerId = 10000 + $lead->id;
-
     $order = \App\Models\Order::create([
-        'customer_id' => $pseudoCustomerId,
-        'customer_phone' => $lead->whatsapp,
-        'service_name' => 'Campaign',
-        'package_type' => $request->landing_title,
-        'total_amount' => $request->offer_price,
-        'status' => 'pending',
-        'order_date' => now(),
-        'transaction_id' => $transaction_id,
+        'customer_id'     => 10000 + $lead->id,            // pseudo-customer
+        'customer_phone'  => $dynamic_fields['whatsapp'] ?? 'N/A',
+        'service_name'    => 'Campaign',
+        'package_type'    => $request->landing_title,
+        'total_amount'    => $request->offer_price,
+        'status'          => 'pending',
+        'order_date'      => now(),
+        'transaction_id'  => $transaction_id,
     ]);
 
-    // Step 4: Prepare SSLCommerz data
+    // Step 5: Prepare SSLCommerz payment
     $post_data = [
-        'store_id' => config('services.sslcommerz.store_id'),
-        'store_passwd' => config('services.sslcommerz.store_password'),
-        'total_amount' => (float)$order->total_amount,
-        'currency' => 'BDT',
-        'tran_id' => $transaction_id,
-        'success_url' => url('/api/sslcommerz/success'),
-        'fail_url' => url('/api/sslcommerz/fail'),
-        'cancel_url' => url('/api/sslcommerz/cancel'),
-        'return_url' => 'https://passionateworlduniversity.com/order-success',
-        'cus_name' => $request->name,
-        'cus_phone' => $request->whatsapp,
-        'cus_add1' => "N/A",
-        'cus_email' => "N/A",
-        'cus_city' => "Rajshahi",
-        'cus_country' => "Bangladesh",
+        'store_id'        => config('services.sslcommerz.store_id'),
+        'store_passwd'    => config('services.sslcommerz.store_password'),
+        'total_amount'    => (float) $order->total_amount,
+        'currency'        => 'BDT',
+        'tran_id'         => $transaction_id,
+        'success_url'     => url('/api/sslcommerz/success'),
+        'fail_url'        => url('/api/sslcommerz/fail'),
+        'cancel_url'      => url('/api/sslcommerz/cancel'),
+        'return_url'      => 'https://passionateworlduniversity.com/order-success',
+        'cus_name'        => $request->name,
+        'cus_phone'       => $dynamic_fields['whatsapp'] ?? 'N/A',
+        'cus_add1'        => 'N/A',
+        'cus_email'       => 'N/A',
+        'cus_city'        => 'Rajshahi',
+        'cus_country'     => 'Bangladesh',
         'shipping_method' => "NO",
-        'product_name' => $order->service_name,
-        'product_category' => $order->package_type,
+        'product_name'    => $order->service_name,
+        'product_category'=> $order->package_type,
         'product_profile' => "general",
-        'checkout_url' => 'easy',
+        'checkout_url'    => 'easy',
     ];
 
-    // Step 5: Call SSLCommerz API
-    $response = \Illuminate\Support\Facades\Http::asForm()->post('https://securepay.sslcommerz.com/gwprocess/v4/api.php', $post_data);
+    // Step 6: Call SSLCommerz API
+    $response = Http::asForm()->post('https://securepay.sslcommerz.com/gwprocess/v4/api.php', $post_data);
     $responseData = $response->json();
 
     if (!empty($responseData['GatewayPageURL'])) {
         return response()->json([
             'success' => true,
-            'payment_url' => $responseData['GatewayPageURL']
+            'payment_url' => $responseData['GatewayPageURL'],
         ]);
     }
 
     return response()->json([
         'error' => true,
-        'message' => $responseData['failedreason'] ?? 'Payment initiation failed'
+        'message' => $responseData['failedreason'] ?? 'Payment initiation failed',
     ], 422);
 }
+
+
 
 
 
