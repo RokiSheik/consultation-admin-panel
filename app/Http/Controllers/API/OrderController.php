@@ -114,23 +114,67 @@ class OrderController extends Controller
 
     }
 
-    public function success(Request $request)
-    {
-        $order = Order::where('transaction_id', $request->tran_id)->first();
+    // public function success(Request $request)
+    // {
+    //     $order = Order::where('transaction_id', $request->tran_id)->first();
 
-        if ($order) {
-            $order->update(['status' => 'completed']);
+    //     if ($order) {
+    //         $order->update(['status' => 'completed']);
 
-            $customer = $order->customer; // Make sure you have this relationship
+    //         $customer = $order->customer; // Make sure you have this relationship
 
-            $customer->notify(new OrderSuccessNotification($order));
+    //         $customer->notify(new OrderSuccessNotification($order));
 
 
-        }
+    //     }
 
-        return redirect('https://passionateworlduniversity.com/order-success');
+    //     return redirect('https://passionateworlduniversity.com/order-success');
+    // }
+
+    // In OrderController.php
+
+public function success(Request $request)
+{
+    $tran_id = $request->input('tran_id');
+    $order = Order::where('transaction_id', $tran_id)->first();
+
+    if (!$order) {
+        // Log error and handle non-existent order
+        return redirect('https://passionateworlduniversity.com/order-failed-or-not-found');
     }
 
+    // Prepare for SSLCommerz transaction validation
+    $validation_data = [
+        'val_id' => $request->input('val_id'), // The validation ID from the response
+        'store_id' => config('services.sslcommerz.store_id'),
+        'store_passwd' => config('services.sslcommerz.store_password'),
+    ];
+
+    // The validation endpoint
+    $validation_url = 'https://securepay.sslcommerz.com/validator/api/merchantTransIDvalidationAPI.php';
+    // or 'https://sandbox.sslcommerz.com/validator/api/merchantTransIDvalidationAPI.php' for sandbox
+
+    $response = Http::asForm()->post($validation_url, $validation_data);
+    $responseData = $response->json();
+
+    if (!empty($responseData['status']) && $responseData['status'] === 'VALID' && (float)$responseData['amount'] === (float)$order->total_amount) {
+        // Transaction is validated and amount matches
+        if ($order->status !== 'completed') {
+            $order->update(['status' => 'completed', 'ssl_transaction_id' => $responseData['sessionkey']]);
+
+            $customer = $order->customer;
+            $customer->notify(new OrderSuccessNotification($order));
+        }
+
+        // Redirect to success page on your frontend
+        return redirect('https://passionateworlduniversity.com/order-success');
+    } else {
+        // Validation failed (e.g., amount mismatch, status not VALID, etc.)
+        // You should log this failure and potentially update status to 'failed_validation'
+        $order->update(['status' => 'failed']); // or another specific status
+        return redirect('https://passionateworlduniversity.com/order-failed');
+    }
+}
     public function fail(Request $request)
     {
         $order = Order::where('transaction_id', $request->tran_id)->first();

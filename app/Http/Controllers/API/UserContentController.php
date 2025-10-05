@@ -20,7 +20,7 @@ class UserContentController extends Controller
         $query = Order::query()
             ->where('status', 'completed')
             ->where('service_name', 'Content')
-            ->whereIn('package_type', ['Basic', 'Business', 'Advanced']);
+            ->whereIn('package_type', ['Monthly', 'Quarterly', 'Half Yearly', 'Yearly', 'Lifetime']);
 
         if ($customerId) {
             $query->where('customer_id', $customerId);
@@ -28,9 +28,11 @@ class UserContentController extends Controller
 
         $orders = $query->get()->map(function ($order) {
             $accessDays = match ($order->package_type) {
-                'Basic' => 30,
-                'Business' => 90,
-                'Advanced' => 365,
+                'Monthly' => 30,
+                'Quarterly' => 90,
+                'Half Yearly' => 180,
+                'Yearly' => 365,
+                'Lifetime' => 0,
                 default => 0
             };
 
